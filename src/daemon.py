@@ -15,6 +15,7 @@ from typing import Optional
 from . import config
 from .discord_ipc import DiscordIPCConnection
 from .ipc_channel import LocalIPCServer
+from .process_monitor import is_antigravity_running
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,10 +37,12 @@ class RPCDaemon:
         self.last_event_time = time.time()
         self.current_state = "idle"
         self.last_activity = None
+        self.antigravity_was_running = False
 
     def on_hook_event(self, event: dict):
         """Called when hook.py sends an event via local IPC."""
         logger.debug(f"Received hook event: {event}")
+        self.antigravity_was_running = True
         self.last_event_time = time.time()
         self.current_state = event.get("type", "thinking")
 
@@ -98,13 +101,18 @@ class RPCDaemon:
         # Connect to Discord initially
         logger.info(f"Starting Antigravity Discord RPC Daemon (Client ID: {self.client_id})...")
         if self.ipc.connect():
-            # Initial idle status
-            idle_cfg = config.STATUS_TEXTS["idle"]
-            self.update_presence(
-                state=idle_cfg["state"],
-                details=idle_cfg["details"],
-                small_icon=config.ASSETS["idle_icon"],
-            )
+            if is_antigravity_running():
+                self.antigravity_was_running = True
+                idle_cfg = config.STATUS_TEXTS["idle"]
+                self.update_presence(
+                    state=idle_cfg["state"],
+                    details=idle_cfg["details"],
+                    small_icon=config.ASSETS["idle_icon"],
+                )
+            else:
+                logger.info("Antigravity is not currently running. Waiting for launch...")
+                self.ipc.clear_activity()
+                self.current_state = "offline"
         else:
             logger.info("Discord is not running yet. Daemon will auto-connect when Discord starts.")
 
@@ -122,10 +130,28 @@ class RPCDaemon:
                 else:
                     time.sleep(1.0)
 
-                # Periodic check for idle status
+                # Periodic check for Antigravity process and idle status
                 now = time.time()
                 if now - last_idle_check >= 3.0:
-                    self.check_idle()
+                    app_alive = is_antigravity_running()
+                    if self.antigravity_was_running and not app_alive:
+                        logger.info("Antigravity process closed. Clearing Discord status...")
+                        self.ipc.clear_activity()
+                        self.current_state = "offline"
+                        self.antigravity_was_running = False
+                    elif not self.antigravity_was_running and app_alive:
+                        logger.info("Antigravity process detected. Restoring Discord status...")
+                        self.antigravity_was_running = True
+                        self.current_state = "idle"
+                        self.start_time = int(time.time())
+                        idle_cfg = config.STATUS_TEXTS["idle"]
+                        self.update_presence(
+                            state=idle_cfg["state"],
+                            details=idle_cfg["details"],
+                            small_icon=config.ASSETS["idle_icon"],
+                        )
+                    elif app_alive:
+                        self.check_idle()
                     last_idle_check = now
 
                 # Auto-reconnect to Discord if disconnected
