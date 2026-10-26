@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and sensitive data
+.env
+.env.*
+*.token
+*.key
+*.pem
+credentials.json
+
+# Local configurations with personal paths
+hooks.json
+
+# Local runtime files
+*.sock
+*.log
+*.pid
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*~

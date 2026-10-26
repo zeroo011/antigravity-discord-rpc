@@ -1,0 +1,38 @@
+{
+  "antigravity-discord-rpc": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "\"python3\" \"<PATH_TO_ANTIGRAVITY_DISCORD_RPC>/main.py\" --hook --event SessionStart",
+        "timeout": 5
+      }
+    ],
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "\"python3\" \"<PATH_TO_ANTIGRAVITY_DISCORD_RPC>/main.py\" --hook --event PreInvocation",
+        "timeout": 5
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"python3\" \"<PATH_TO_ANTIGRAVITY_DISCORD_RPC>/main.py\" --hook --event PreToolUse",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "\"python3\" \"<PATH_TO_ANTIGRAVITY_DISCORD_RPC>/main.py\" --hook --event Stop",
+        "timeout": 5
+      }
+    ]
+  }
+}
